@@ -3,6 +3,10 @@
   const A = window.ALBUM;
   const BASE = A.base; // absolute site base with trailing slash
   const tracks = A.songs;
+  // resolve asset dirs to absolute URLs NOW, before history.replaceState
+  // changes the path and breaks relative resolution
+  const AUDIO_DIR = new URL(A.audioDir, document.baseURI).href;
+  const ART_DIR = new URL(A.artDir, document.baseURI).href;
 
   const audio = new Audio();
   audio.preload = "metadata";
@@ -47,12 +51,12 @@
   function load(i, { autoplay = true } = {}) {
     idx = (i + tracks.length) % tracks.length;
     const t = tracks[idx];
-    audio.src = A.audioDir + t.id + ".mp3";
-    el.nowArt.src = A.artDir + t.id + ".jpeg";
+    audio.src = AUDIO_DIR + t.id + ".mp3";
+    el.nowArt.src = ART_DIR + t.id + ".jpeg";
     el.nowTitle.textContent = t.title;
     el.nowSub.textContent = A.artist;
-    el.ovArt.src = A.artDir + t.id + ".jpeg";
-    el.ovBg.style.backgroundImage = `url("${A.artDir + t.id}.jpeg")`;
+    el.ovArt.src = ART_DIR + t.id + ".jpeg";
+    el.ovBg.style.backgroundImage = `url("${ART_DIR + t.id}.jpeg")`;
     el.ovTitle.textContent = t.title;
     el.ovLyrics.textContent = t.lyrics || "";
     el.dur.textContent = fmt(t.duration);
@@ -62,6 +66,7 @@
       const on = r.dataset.id === t.id;
       r.classList.toggle("active", on);
     });
+    $$(".cover").forEach(c => c.classList.toggle("active", c.dataset.id === t.id));
     try { history.replaceState(null, "", BASE + "t/" + t.slug + "/"); } catch { /* local preview */ }
     setSession(t);
     if (autoplay) play();
@@ -69,6 +74,7 @@
 
   function play() {
     ensureViz();
+    if (ctx && ctx.state === "suspended") ctx.resume();
     audio.play().then(() => {
       playing = true; syncUI();
     }).catch(() => { playing = false; syncUI(); });
@@ -168,7 +174,7 @@
     if (!("mediaSession" in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: t.title, artist: A.artist, album: A.title,
-      artwork: [{ src: A.artDir + t.id + ".jpeg", sizes: "512x512", type: "image/jpeg" }],
+      artwork: [{ src: ART_DIR + t.id + ".jpeg", sizes: "512x512", type: "image/jpeg" }],
     });
     navigator.mediaSession.setActionHandler("play", play);
     navigator.mediaSession.setActionHandler("pause", pause);
@@ -187,6 +193,7 @@
       analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
       src.connect(analyser); analyser.connect(ctx.destination);
+      if (ctx.state === "suspended") ctx.resume();
       dataArr = new Uint8Array(analyser.frequencyBinCount);
       vizOn = true;
       drawViz();
@@ -210,6 +217,61 @@
         g.fill();
       }
     })();
+  }
+
+  /* ── cover wall ── */
+  $$(".cover").forEach(c => c.addEventListener("click", () => {
+    const i = +c.dataset.index;
+    if (i === idx) toggle(); else load(i);
+  }));
+
+  /* ── topbar state ── */
+  const topbar = $(".topbar");
+  const onScroll = () => topbar?.classList.toggle("scrolled", scrollY > 40);
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  /* ── scroll reveal ── */
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) {
+          en.target.classList.add("in");
+          io.unobserve(en.target);
+          setTimeout(() => { en.target.style.transitionDelay = ""; }, 1300);
+        }
+      });
+    }, { rootMargin: "0px 0px -8% 0px" });
+    $$(".reveal").forEach(n => io.observe(n));
+    $$(".track, .cover").forEach((n, i) => {
+      n.classList.add("reveal");
+      n.style.transitionDelay = `${Math.min((i % 10) * 55, 400)}ms`;
+      io.observe(n);
+    });
+  } else {
+    $$(".reveal").forEach(n => n.classList.add("in"));
+  }
+  // safety net: never leave content hidden if the observer misbehaves
+  setTimeout(() => $$(".reveal:not(.in)").forEach(n => {
+    n.style.transitionDelay = "";
+    n.classList.add("in");
+  }), 3000);
+
+  /* ── hero deck parallax ── */
+  const stack = $(".hero-stack");
+  if (stack && matchMedia("(pointer: fine)").matches) {
+    const hero = $(".hero");
+    hero.addEventListener("pointermove", e => {
+      const r = hero.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width - .5;
+      const ny = (e.clientY - r.top) / r.height - .5;
+      stack.style.setProperty("--tx", (nx * 18).toFixed(1) + "px");
+      stack.style.setProperty("--ty", (ny * 14).toFixed(1) + "px");
+    });
+    hero.addEventListener("pointerleave", () => {
+      stack.style.setProperty("--tx", "0px");
+      stack.style.setProperty("--ty", "0px");
+    });
   }
 
   /* ── deep link ── */

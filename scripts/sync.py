@@ -57,6 +57,14 @@ def slugify(t):
     t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-zA-Z0-9]+", "-", t).strip("-").lower() or "track"
 
+def tr_cap(w):
+    if not w: return w
+    up = {"i": "İ", "ı": "I"}.get(w[0], w[0].upper())
+    return up + w[1:]
+
+def tr_title(t):
+    return " ".join(tr_cap(w) for w in t.split())
+
 def first_line(ly):
     for line in ly.splitlines():
         line = line.strip()
@@ -86,7 +94,7 @@ def main():
         if len(lyrics) > 6000: lyrics = ""
         title = deref(c.get("title", "")).strip()
         if not title or title.lower() == "untitled" or re.match(r"^\d{4}-\d{2}-\d{2}", title) or len(title) > 80:
-            title = first_line(lyrics) or f"Eser {n:02d}"
+            title = tr_title(first_line(lyrics)) or f"Eser {n:02d}"
         base = slugify(title); slug = base; k = 2
         while slug in seen: slug = f"{base}-{k}"; k += 1
         seen.add(slug)

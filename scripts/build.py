@@ -54,7 +54,12 @@ def album_js(prefix):
 def track_rows(prefix):
     rows = []
     for i, s in enumerate(SONGS):
-        sub = first_line(s["lyrics"]) or "Enstrümantal"
+        sub = ""
+        for line in (s["lyrics"] or "").splitlines():
+            line = line.strip()
+            if line and line[0] not in "[(" and line.lower().rstrip(" ,.;?!") != s["title"].lower().rstrip(" ,.;?!"):
+                sub = line; break
+        sub = sub or "Enstrümantal"
         rows.append(f"""
       <div class="track" data-index="{i}" data-id="{s['id']}">
         <div class="track-no"><span>{s['track_no']:02d}</span>
@@ -107,6 +112,17 @@ def og_block(url, title, description, image, *, song=None):
         ]
     return "\n  ".join(tags)
 
+def cover_wall(prefix):
+    cells = []
+    for i, s in enumerate(SONGS):
+        cells.append(f"""
+      <div class="cover" data-index="{i}" data-id="{s['id']}">
+        <img loading="lazy" src="{prefix}assets/art/{s['id']}.jpeg" alt="{E(s['title'])} kapağı">
+        <div class="cover-veil"><h4>{E(s['title'])}</h4>
+          <span class="chip">{ICONS['play']}</span></div>
+      </div>""")
+    return "".join(cells)
+
 def page(prefix, og, *, start_slug=None):
     body_attr = f' data-start="{start_slug}"' if start_slug else ""
     return f"""<!DOCTYPE html>
@@ -115,7 +131,7 @@ def page(prefix, og, *, start_slug=None):
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{E(TITLE)} — {E(ARTIST)}</title>
-  <meta name="theme-color" content="#0d0a08">
+  <meta name="theme-color" content="#0c0906">
   {og}
   <link rel="icon" href="{prefix}favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,28 +141,51 @@ def page(prefix, og, *, start_slug=None):
 </head>
 <body{body_attr}>
 
+  <nav class="topbar">
+    <a class="brand" href="{prefix}">Eser<em>V2</em></a>
+    <div class="topbar-links">
+      <a href="{prefix}#sarkilar">Şarkılar</a>
+      <a href="{prefix}#kapaklar">Kapaklar</a>
+      <a href="{prefix}#hakkinda">Hakkında</a>
+    </div>
+  </nav>
+
   <header class="hero">
     <div class="hero-art" style="background-image:url('{prefix}assets/art/{SONGS[0]['id']}.jpeg')"></div>
-    <p class="hero-eyebrow">Albüm · {len(SONGS)} Şarkı</p>
-    <h1>Eser<em>V2</em></h1>
-    <p class="hero-sub">söz &amp; müzik · <b>{E(ARTIST)}</b></p>
-    <p class="hero-quote">“{E(QUOTE)}”</p>
-    <div class="hero-actions">
-      <button class="btn btn-gold">{ICONS['play']} Dinle</button>
-      <button class="btn btn-ghost">{ICONS['share']} Paylaş</button>
+    <div class="hero-inner">
+      <div class="hero-text">
+        <p class="hero-eyebrow">Albüm · {len(SONGS)} Şarkı</p>
+        <h1>Eser<em>V2</em></h1>
+        <p class="hero-sub">söz &amp; müzik · <b>{E(ARTIST)}</b></p>
+        <p class="hero-quote">“{E(QUOTE)}”</p>
+        <div class="hero-actions">
+          <button class="btn btn-gold">{ICONS['play']} Dinle</button>
+          <button class="btn btn-ghost">{ICONS['share']} Paylaş</button>
+        </div>
+      </div>
+      <div class="hero-stack" aria-hidden="true">
+        <img class="s3" src="{prefix}assets/art/{SONGS[2]['id']}.jpeg" alt="">
+        <img class="s2" src="{prefix}assets/art/{SONGS[1]['id']}.jpeg" alt="">
+        <img class="s1" src="{prefix}assets/art/{SONGS[0]['id']}.jpeg" alt="">
+      </div>
     </div>
     <span class="scroll-hint">{ICONS['down']}</span>
   </header>
 
   <main class="wrap">
-    <div class="section-head"><h2>Şarkılar</h2><span>{E(TITLE)}</span></div>
+    <div class="section-head reveal" id="sarkilar"><h2>Şarkılar</h2><i class="rule"></i><span>{E(TITLE)}</span></div>
     <section class="tracks">{track_rows(prefix)}
     </section>
 
-    <section class="about">
+    <div class="section-head reveal" id="kapaklar"><h2>Kapaklar</h2><i class="rule"></i><span>Görsel Defter</span></div>
+    <section class="covers reveal">{cover_wall(prefix)}
+    </section>
+
+    <div class="section-head reveal" id="hakkinda"><h2>Hakkında</h2><i class="rule"></i></div>
+    <section class="about reveal">
       <img src="{prefix}assets/art/{SONGS[-1]['id']}.jpeg" alt="{E(TITLE)} albüm kapağı">
       <div>
-        <h2>{E(TITLE)} hakkında</h2>
+        <h2>{E(TITLE)}</h2>
         <p>Hüznün, hasretin ve gecenin içinden geçen {len(SONGS)} şarkı.
         Her parça kendi hikâyesini anlatır; sözler satır satır sayfada,
         sesler bir tık uzağınızda. Beğendiğiniz şarkıyı paylaşım tuşuyla
@@ -155,7 +194,7 @@ def page(prefix, og, *, start_slug=None):
     </section>
   </main>
 
-  <footer>© 2026 {E(ARTIST)} · {E(TITLE)}</footer>
+  <footer><span class="fbrand">Eser<em>V2</em></span>© 2026 {E(ARTIST)}</footer>
 
   <!-- player -->
   <div class="player" role="region" aria-label="Müzik çalar">
