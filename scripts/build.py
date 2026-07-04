@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """EserV2 site generator: reads scripts/songs.json, writes static pages into docs/."""
-import json, html, os, shutil, sys
+import json, html, os, shutil, sys, hashlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, "docs")
@@ -12,6 +12,14 @@ ARTIST = "dr_kaligram"
 TITLE = PL.get("name", "EserV2")
 
 E = html.escape
+
+def fingerprint(rel):
+    path = os.path.join(DOCS, rel)
+    with open(path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()[:8]
+
+CSS_V = fingerprint("css/style.css")
+JS_V = fingerprint("js/player.js")
 
 def fmt_dur(sec):
     sec = int(sec or 0)
@@ -137,7 +145,7 @@ def page(prefix, og, *, start_slug=None):
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{prefix}css/style.css">
+  <link rel="stylesheet" href="{prefix}css/style.css?v={CSS_V}">
 </head>
 <body{body_attr}>
 
@@ -232,7 +240,7 @@ def page(prefix, og, *, start_slug=None):
   <div class="toast" role="status"></div>
 
   <script>window.ALBUM = {album_js(prefix)};</script>
-  <script src="{prefix}js/player.js"></script>
+  <script src="{prefix}js/player.js?v={JS_V}"></script>
 </body>
 </html>"""
 

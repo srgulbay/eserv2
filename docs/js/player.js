@@ -183,21 +183,32 @@
     navigator.mediaSession.setActionHandler("seekto", d => { audio.currentTime = d.seekTime; });
   }
 
-  /* ── visualizer ── */
-  let ctx, analyser, dataArr, vizOn = false;
+  /* ── visualizer ──
+     Audio is only routed through Web Audio once the context is verifiably
+     RUNNING; otherwise the element keeps its default (always audible) path.
+     Routing through a suspended context would mute playback on some browsers
+     (iOS Safari) — never risk sound for a spectrum display. */
+  let ctx, analyser, dataArr, connected = false, vizOn = false;
   function ensureViz() {
-    if (vizOn || !el.viz || !window.AudioContext) return;
+    if (!el.viz || !window.AudioContext) return;
+    if (!ctx) {
+      try { ctx = new AudioContext(); } catch { return; }
+      ctx.onstatechange = tryConnect;
+    }
+    if (ctx.state === "suspended") ctx.resume().then(tryConnect).catch(() => {});
+    else tryConnect();
+  }
+  function tryConnect() {
+    if (connected || !ctx || ctx.state !== "running") return;
     try {
-      ctx = new AudioContext();
       const src = ctx.createMediaElementSource(audio);
       analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
       src.connect(analyser); analyser.connect(ctx.destination);
-      if (ctx.state === "suspended") ctx.resume();
       dataArr = new Uint8Array(analyser.frequencyBinCount);
-      vizOn = true;
-      drawViz();
-    } catch { /* CORS or double-init: keep native audio path */ }
+      connected = true;
+      if (!vizOn) { vizOn = true; drawViz(); }
+    } catch { /* double-init etc.: keep native audio path */ }
   }
   function drawViz() {
     const c = el.viz, g = c.getContext("2d");
