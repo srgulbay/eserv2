@@ -70,7 +70,12 @@ body::after {
 }
 .topbar-links a:hover { color: var(--text); }
 .topbar-links a:hover::after { right: 0; }
-@media (max-width: 640px) { .topbar-links { gap: 18px; } .topbar-links a { font-size: 11.5px; } }
+@media (max-width: 640px) {
+  .topbar { padding-left: 18px; padding-right: 18px; }
+  .topbar-links { gap: 13px; }
+  .topbar-links a { font-size: 10.5px; letter-spacing: .07em; }
+  .brand { font-size: 21px; }
+}
 
 /* ── hero ─────────────────────────────────────────────────────────── */
 .hero {
@@ -241,6 +246,7 @@ body::after {
 .tracks { display: flex; flex-direction: column; }
 .track {
   display: grid;
+  min-width: 0; /* flex column parent: allow ellipsis instead of overflow */
   grid-template-columns: 44px 60px 1fr auto;
   align-items: center; gap: 18px;
   padding: 14px 18px;
