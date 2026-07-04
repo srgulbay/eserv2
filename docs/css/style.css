@@ -438,6 +438,11 @@ footer .fbrand em { font-style: italic; color: var(--gold); }
   box-shadow: 0 10px 30px -6px rgba(216,164,75,.55), inset 0 1px 0 rgba(255,255,255,.4);
 }
 .ctrl-play:hover { color: #191006; transform: scale(1.07); }
+.player.await .ctrl-play { animation: pulseGold 1.9s ease-in-out infinite; }
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 10px 30px -6px rgba(216,164,75,.55), 0 0 0 0 rgba(216,164,75,.5); }
+  50%      { box-shadow: 0 10px 30px -6px rgba(216,164,75,.55), 0 0 0 15px rgba(216,164,75,0); }
+}
 .ctrl-play svg { width: 22px; height: 22px; }
 .player-right { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .time { color: var(--faint); font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }

@@ -85,6 +85,7 @@
   function syncUI() {
     el.playIco.style.display = playing ? "none" : "";
     el.pauseIco.style.display = playing ? "" : "none";
+    el.player.classList.toggle("await", idx >= 0 && !playing);
     $$(".track").forEach(r =>
       r.classList.toggle("playing", playing && r.dataset.id === tracks[idx]?.id));
   }
@@ -293,6 +294,14 @@
   }
   if (document.body.dataset.start) {
     load(startIdx(), { autoplay: false });
-    play(); // will be blocked politely if no gesture; UI stays ready
+    play(); // usually blocked without a gesture; UI stays ready
+    // shared-link UX: the first tap anywhere starts the shared song,
+    // unless the tap targets a control that has its own behavior
+    const kick = e => {
+      const own = e.target.closest(".track, .cover, button, a, input, .player, .overlay");
+      if (!playing && !own) play();
+      document.removeEventListener("pointerdown", kick, true);
+    };
+    document.addEventListener("pointerdown", kick, true);
   }
 })();
